@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="th" data-mode="light" data-theme="ocean" data-board="cartoon">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Battleship Online</title>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+*{box-sizing:border-box}
+:root{font-family:Kanit,system-ui,sans-serif}
+[data-mode=light]{--bg:#eaf6ff;--card:#fff;--ink:#12324a;--mut:#5b7a90;--line:#cfe3f0}
+[data-mode=dark]{--bg:#0d1b2a;--card:#16283b;--ink:#e8f3fb;--mut:#8fb0c7;--line:#27425a}
+[data-theme=ocean]{--acc:#0a84ff;--acc2:#00d4ff;--w1:#5ccbff;--w2:#32aef2}
+[data-theme=sea]{--acc:#00a99a;--acc2:#ff8a5b;--w1:#6ff0d8;--w2:#34d6c0}
+[data-theme=army]{--acc:#5f7f1e;--acc2:#e0a526;--w1:#b5c97a;--w2:#94ad5a}
+[data-board=cartoon]{--c1:var(--w1);--c2:var(--w2);--cb:#12324a;--cw:2px;--cr:8px;--gap:3px;--ship:#ff9f1c}
+[data-board=cool]{--c1:#1c2b3a;--c2:#233649;--cb:#00e5ff66;--cw:1px;--cr:3px;--gap:2px;--ship:#8b6cff}
+[data-board=retro]{--c1:#f2e6c4;--c2:#e6d4a3;--cb:#8a6d3b;--cw:1px;--cr:1px;--gap:0px;--ship:#5a4a2a}
+[data-board=green]{--c1:#eeeed2;--c2:#769656;--cb:transparent;--cw:0px;--cr:0px;--gap:0px;--ship:#3d3d3d}
+body{margin:0;min-height:100vh;color:var(--ink);background:var(--bg);background-attachment:fixed;
+ background-image:radial-gradient(circle at 12% 8%,color-mix(in srgb,var(--acc2) 35%,transparent),transparent 40%),radial-gradient(circle at 92% 92%,color-mix(in srgb,var(--acc) 30%,transparent),transparent 45%)}
+[data-theme=army] body{background-image:radial-gradient(ellipse 120px 70px at 20% 30%,#6b7f3a55 98%,transparent),radial-gradient(ellipse 160px 90px at 70% 20%,#3f4d2255 98%,transparent),radial-gradient(ellipse 140px 80px at 50% 80%,#8a7a4a44 98%,transparent);background-size:340px 260px}
+[hidden]{display:none!important}
+h3{margin:0 0 10px;font-size:16px}
+.card{background:var(--card);border:2px solid var(--line);border-radius:18px;padding:14px 16px;margin-bottom:14px}
+.hdr,.bar{display:flex;align-items:center;gap:12px;padding:12px 18px;flex-wrap:wrap}
+.hdr b,.bar b{font-weight:800;font-size:20px;color:var(--acc)}
+.sp{flex:1}
+.lg{display:grid;grid-template-columns:1fr 1fr;gap:0 16px;padding:0 18px 24px;max-width:1100px;margin:0 auto}
+@media(max-width:800px){.lg{grid-template-columns:1fr}}
+.b,.b2{border-radius:12px;padding:9px 16px;font:inherit;font-weight:600;cursor:pointer;border:2px solid var(--acc)}
+.b{background:var(--acc);color:#fff}.b2{background:transparent;color:var(--acc)}
+.b:hover,.b2:hover{filter:brightness(1.1)}
+.seg{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 10px;align-items:center}.seg span{width:64px;color:var(--mut);font-size:14px}
+.seg button{border:2px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:5px 12px;font:inherit;cursor:pointer}
+.seg button.on{border-color:var(--acc);background:var(--acc);color:#fff}
+input{font:inherit;padding:9px 12px;border-radius:12px;border:2px solid var(--line);background:var(--bg);color:var(--ink);min-width:0}
+.row{display:flex;gap:8px;margin-bottom:8px;align-items:center}.row input{flex:1}
+.li{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-size:15px}
+.li:last-child{border:0}.li .sp{flex:1}.mut{color:var(--mut);font-size:14px}
+.dot{width:10px;height:10px;border-radius:50%;background:#2ecc71;display:inline-block}.dot.off{background:var(--line)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
+.stats div{background:var(--bg);border-radius:12px;padding:8px}.stats b{display:block;font-size:24px;color:var(--acc)}
+#login{min-height:100vh;display:grid;place-items:center;text-align:center;padding:20px}
+#login h1{font-size:clamp(36px,9vw,64px);margin:0;font-weight:800;color:var(--acc)}
+#login .card{max-width:380px}
+.gm{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:16px;padding:0 18px 24px;max-width:960px;margin:0 auto}
+@media(max-width:800px){.gm{grid-template-columns:1fr}}
+.bw{width:min(100%,max(280px,calc(50vh - 110px)));margin:0 auto 10px}
+.bd{display:grid;grid-template-columns:20px repeat(10,1fr);gap:var(--gap)}
+.hd{font-style:normal;font-size:11px;color:var(--mut);display:grid;place-items:center}
+.c{aspect-ratio:1;background:var(--c1);border:var(--cw) solid var(--cb);border-radius:var(--cr);position:relative;display:grid;place-items:center}
+.c.a{background:var(--c2)}
+.c.ship{background:var(--ship)!important}
+.c.hit{background:#ff3b5c!important;color:#fff;font-weight:800}.c.hit::after{content:"✕"}
+.c.miss::after{content:"";width:28%;height:28%;border-radius:50%;background:#fff;opacity:.9}
+.c.pend{animation:pd 1s infinite}@keyframes pd{50%{opacity:.4}}
+.c.tg{cursor:crosshair}.c.tg:hover{outline:3px solid var(--acc2);z-index:1}
+.turn{text-align:center;font-weight:800;font-size:18px;padding:8px;border-radius:14px;margin-bottom:10px;background:var(--card);border:2px solid var(--line)}
+.turn.me{background:var(--acc);color:#fff;border-color:var(--acc)}
+.chip{display:inline-block;padding:4px 10px;border-radius:99px;background:var(--bg);margin:3px;font-size:14px}
+.chip.x{text-decoration:line-through;opacity:.5}.chip.cur{background:var(--acc);color:#fff}
+#toasts{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);display:grid;gap:8px;z-index:20;width:max-content;max-width:92vw}
+.t{background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:14px;font-size:15px}
+.mb{position:fixed;inset:0;background:#0008;display:grid;place-items:center;z-index:10;padding:16px}
+.md{background:var(--card);border-radius:20px;padding:20px;max-width:360px;width:100%;text-align:center}
+.md h3{font-size:22px}.md .row{justify-content:center}
+@media(prefers-reduced-motion:reduce){.c.pend{animation:none}}
+</style>
+</head>
+<body>
+<div id="ld" style="padding:60px 20px;text-align:center;font-size:18px">กำลังโหลดเกม… ถ้าค้างอยู่ตรงนี้ ให้กด F12 แล้วดูข้อความสีแดงในแท็บ Console</div>
+<section id="login" hidden>
+ <div><h1>BATTLESHIP</h1><p class="mut">เกมเรือรบออนไลน์ 1 ต่อ 1</p>
+ <div class="card"><form id="lf" style="display:grid;gap:10px;text-align:left">
+  <input id="em" type="text" name="username" autocomplete="username" placeholder="ชื่อ Gmail เช่น somchai หรือ somchai@gmail.com">
+  <input id="pw" type="password" name="password" autocomplete="current-password" placeholder="รหัสผ่าน (อย่างน้อย 6 ตัว)">
+  <button class="b" type="submit">เข้าสู่ระบบ</button>
+  <button class="b2" type="button" data-a="signup">สมัครใหม่</button></form>
+ <p class="mut" style="margin:10px 0 0">ไม่ต้องยืนยันอีเมล ใช้ Gmail อะไรก็ได้ และตั้งรหัสผ่านเอง เบราว์เซอร์จะช่วยจำให้เข้าครั้งต่อไปได้</p></div></div>
+</section>
+
+<section id="lobby" hidden>
+ <div class="hdr"><b>BATTLESHIP</b><span class="sp"></span><span id="who" class="mut"></span><button class="b2" data-a="logout">ออกจากระบบ</button></div>
+ <main class="lg">
+  <div>
+   <div class="card" id="me"></div>
+   <div class="card"><h3>อันดับผู้ชนะ</h3><div id="top"></div></div>
+   <div class="card"><h3>ออนไลน์ตอนนี้ <span id="oc" class="mut"></span></h3><div id="onl"></div></div>
+  </div>
+  <div>
+   <div class="card"><h3>ตั้งค่า</h3><div id="set"></div></div>
+   <div class="card"><h3>เล่นเกม</h3>
+    <div class="row"><button class="b" data-a="create">สร้างห้องใหม่</button></div>
+    <div class="row"><input id="jc" maxlength="4" placeholder="รหัสห้อง 4 ตัว"><button class="b2" data-a="joinCode">เข้าห้อง</button></div>
+    <div id="rooms"></div></div>
+   <div class="card"><h3>เพื่อน</h3>
+    <div class="row"><input id="fs" placeholder="ค้นหาจากชื่อผู้เล่น"><button class="b2" data-a="search">ค้นหา</button></div>
+    <div id="frs"></div><div id="frl"></div></div>
+  </div>
+ </main>
+</section>
+
+<section id="game" hidden></section>
+<div id="modal"></div><div id="toasts"></div>
+
+<script>
+const SB_URL='https://mwdkbqxafakblibgsuqh.supabase.co', SB_KEY='sb_publishable_Nkru3kq55vuSWBhcy_vl_w_krJ4To-T';
+let sb,cfgErr='';
+try{sb=supabase.createClient(SB_URL,SB_KEY,{auth:{lock:(n,t,f)=>f()}})}catch(e){cfgErr=String(e.message||e)}
+const $=s=>document.querySelector(s);
+const SH=[['เรือบรรทุก',5],['เรือรบ',4],['เรือลาดตระเวน',3],['เรือดำน้ำ',3],['เรือพิฆาต',2]];
+const LT='ABCDEFGHIJ', lab=i=>LT[i%10]+(Math.floor(i/10)+1);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const cfg=Object.assign({mode:'light',theme:'ocean',board:'cartoon'},JSON.parse(localStorage.bsCfg||'{}'));
+let me,room,ships=[],myShots={},inShots={},sunkE=[],pl={h:true},online={},chan,rch,topList=[],rooms=[],friends=[],found=[],busy=new Set(),told=new Set(),first=true;
+
+function applyCfg(){const e=document.documentElement.dataset;e.mode=cfg.mode;e.theme=cfg.theme;e.board=cfg.board;localStorage.bsCfg=JSON.stringify(cfg)}
+const show=n=>{$('#ld').hidden=true;['login','lobby','game'].forEach(x=>$('#'+x).hidden=x!==n)};
+const allHidden=()=>['login','lobby','game'].every(x=>$('#'+x).hidden);
+function toast(h,ms=3500){const d=document.createElement('div');d.className='t';d.innerHTML=h;$('#toasts').append(d);setTimeout(()=>d.remove(),ms)}
+const modal=h=>$('#modal').innerHTML=h?`<div class="mb"><div class="md">${h}</div></div>`:'';
+
+function fail(m){show('login');$('#login .card').innerHTML='<p style="color:#e5484d;margin:0"><b>เริ่มเกมไม่ได้</b></p><p class="mut">'+m+'</p>'}
+async function init(){
+ applyCfg();
+ if(typeof supabase==='undefined')return fail('โหลดไลบรารี Supabase ไม่ได้ ตรวจอินเทอร์เน็ต หรือปิดตัวบล็อกโฆษณาแล้วรีเฟรช');
+ if(SB_KEY.startsWith('YOUR_')||cfgErr)return fail('ยังไม่ได้ใส่คีย์ SB_KEY ในไฟล์ index.html (บรรทัดต้นของส่วน script) '+esc(cfgErr));
+ const {data:{session}}=await sb.auth.getSession();
+ if(!session)return show('login');
+ if(!(session.user.email||'').toLowerCase().endsWith('@gmail.com')){await sb.auth.signOut();toast('ใช้ได้เฉพาะบัญชี Gmail');return show('login')}
+ const {data:p}=await sb.from('profiles').select('*').eq('id',session.user.id).maybeSingle();
+ if(p){me=p;return lobby()}
+ show('login');$('#login .card').hidden=true;askName(session.user.id);
+}
+function askName(id,msg=''){
+ modal(`<h3>ตั้งชื่อผู้เล่น</h3><p class="mut">3-16 ตัว ใช้ตัวอักษร ตัวเลข หรือ _ ชื่อซ้ำกันไม่ได้</p><p style="color:#e5484d">${msg}</p><div class="row"><input id="un" maxlength="16" placeholder="เช่น CaptainNemo"><button class="b" data-a="saveName" data-id="${id}">บันทึก</button></div>`);
+}
+async function lobby(){
+ show('lobby');$('#who').textContent=me.username;
+ chan=sb.channel('lobby',{config:{presence:{key:me.id}}});
+ chan.on('presence',{event:'sync'},()=>{online=chan.presenceState();renderOnline()})
+  .on('broadcast',{event:'invite'},({payload:p})=>{if(p.to===me.id)toast(`<b>${esc(p.from)}</b> ชวนเล่น ห้อง ${p.code} <button class="b" data-a="joinInv" data-c="${p.code}">เข้าร่วม</button>`,20000)})
+  .subscribe(s=>{if(s==='SUBSCRIBED')track()});
+ renderSet();loadLobby();
+}
+const track=()=>chan&&chan.track({name:me.username,play:!!room});
+async function loadLobby(){
+ const [a,b,c,d,e]=await Promise.all([
+  sb.from('profiles').select('*').eq('id',me.id).single(),
+  sb.from('profiles').select('username,wins,losses').order('wins',{ascending:false}).limit(10),
+  sb.from('rooms').select('*,h:profiles!rooms_host_fkey(username)').is('guest',null).eq('status','waiting').order('created_at',{ascending:false}).limit(10),
+  sb.from('friends').select('p:profiles!friends_friend_id_fkey(id,username)').eq('user_id',me.id),
+  sb.from('rooms').select('id').or(`host.eq.${me.id},guest.eq.${me.id}`).neq('status','done').limit(1)]);
+ me=a.data||me;topList=b.data||[];rooms=c.data||[];friends=(d.data||[]).map(x=>x.p);
+ const mine=(e.data||[])[0];
+ $('#me').innerHTML=`<h3>${esc(me.username)}</h3><div class="stats"><div><b>${me.wins}</b>ชนะ</div><div><b>${me.losses}</b>แพ้</div><div><b>${me.wins+me.losses?Math.round(me.wins/(me.wins+me.losses)*100):0}%</b>อัตราชนะ</div></div>${mine?`<div class="row" style="margin-top:10px"><button class="b" data-a="join" data-v="${mine.id}">กลับเข้าเกมที่ค้างอยู่</button></div>`:''}`;
+ $('#top').innerHTML=topList.map((p,i)=>`<div class="li"><b>${i+1}</b><span class="sp">${esc(p.username)}</span><span class="mut">ชนะ ${p.wins} แพ้ ${p.losses}</span></div>`).join('')||'<p class="mut">ยังไม่มีข้อมูล</p>';
+ $('#rooms').innerHTML=`<p class="mut" style="margin:6px 0">ห้องที่เปิดอยู่</p>`+(rooms.map(r=>`<div class="li"><span class="sp">${esc(r.h?.username||'?')} <span class="mut">(${r.code})</span></span>${r.host===me.id?'<span class="mut">ห้องของคุณ</span>':''}<button class="b2" data-a="join" data-v="${r.id}">${r.host===me.id?'กลับเข้า':'เข้าร่วม'}</button></div>`).join('')||'<p class="mut">ยังไม่มีห้อง สร้างห้องแรกได้เลย</p>');
+ renderFriends();renderOnline();
+}
+function renderOnline(){
+ const ids=Object.keys(online);$('#oc').textContent=`(${ids.length})`;
+ $('#onl').innerHTML=ids.map(id=>{const v=online[id][0];return `<div class="li"><i class="dot"></i><span class="sp">${esc(v.name)}</span><span class="mut">${v.play?'กำลังเล่น':'ว่าง'}</span></div>`}).join('');
+ renderFriends();if(room)render();
+}
+function renderFriends(){
+ const el=$('#frl');if(!el)return;
+ el.innerHTML=`<p class="mut" style="margin:6px 0">เพื่อนของคุณ</p>`+(friends.map(f=>`<div class="li"><i class="dot ${online[f.id]?'':'off'}"></i><span class="sp">${esc(f.username)}</span><span class="mut">${online[f.id]?(online[f.id][0].play?'กำลังเล่น':'ออนไลน์'):'ออฟไลน์'}</span></div>`).join('')||'<p class="mut">ค้นหาชื่อเพื่อนด้านบนเพื่อเพิ่ม</p>');
+ $('#frs').innerHTML=found.map(f=>`<div class="li"><span class="sp">${esc(f.username)}</span>${friends.some(x=>x.id===f.id)?'<span class="mut">เป็นเพื่อนแล้ว</span>':`<button class="b2" data-a="add" data-id="${f.id}">เพิ่มเพื่อน</button>`}</div>`).join('');
+}
+function renderSet(){
+ const g=(k,t,o)=>`<div class="seg"><span>${t}</span>${o.map(([v,l])=>`<button class="${cfg[k]===v?'on':''}" data-a="cfg" data-k="${k}" data-v="${v}">${l}</button>`).join('')}</div>`;
+ $('#set').innerHTML=g('mode','โหมด',[['light','กลางวัน'],['dark','มืด']])+g('theme','พื้นหลัง',[['sea','ทะเล'],['ocean','มหาสมุทร'],['army','ทหาร']])+g('board','กระดาน',[['cartoon','การ์ตูน'],['cool','เท่'],['retro','เก่า'],['green','หมากรุกเขียว']]);
+}
+
+/* ---------- ห้องและเกม ---------- */
+async function join(col,val){
+ const {data:r}=await sb.from('rooms').select('*').eq(col,val).maybeSingle();
+ if(!r)return toast('ไม่พบห้อง');
+ if(r.status==='done')return toast('ห้องนี้จบเกมแล้ว');
+ if(r.host===me.id||r.guest===me.id)return enter(r);
+ if(r.guest)return toast('ห้องเต็มแล้ว');
+ const {data,error}=await sb.from('rooms').update({guest:me.id,status:'placing'}).eq('id',r.id).is('guest',null).select().single();
+ if(error||!data)return toast('เข้าห้องไม่ได้ อาจมีคนเข้าก่อน');enter(data);
+}
+function enter(r){
+ room=r;ships=JSON.parse(localStorage['sh'+r.id]||'[]');myShots={};inShots={};sunkE=[];told=new Set();first=true;pl={h:true};
+ show('game');track();
+ rch=sb.channel('r'+r.id)
+  .on('postgres_changes',{event:'*',schema:'public',table:'rooms',filter:'id=eq.'+r.id},()=>sync())
+  .on('postgres_changes',{event:'*',schema:'public',table:'moves',filter:'room_id=eq.'+r.id},()=>sync())
+  .subscribe(s=>{if(s==='SUBSCRIBED')sync()});
+ render();
+}
+async function sync(){
+ if(!room)return;
+ const [a,b]=await Promise.all([
+  sb.from('rooms').select('*,h:profiles!rooms_host_fkey(username),g:profiles!rooms_guest_fkey(username)').eq('id',room.id).single(),
+  sb.from('moves').select('*').eq('room_id',room.id).order('id')]);
+ if(!a.data)return leaveUI();
+ room=a.data;myShots={};inShots={};sunkE=[];
+ for(const m of b.data||[]){
+  if(m.shooter===me.id){
+   myShots[m.cell]=m.result||'?';if(m.sunk)sunkE.push(m.sunk);
+   if(m.result&&!told.has(m.id)){told.add(m.id);if(!first)toast(`ยิง ${lab(m.cell)}: ${m.sunk?'จม '+m.sunk+'!':m.result==='hit'?'โดน!':'พลาด'}`)}
+  }else{
+   inShots[m.cell]=m.result||'?';
+   if(!m.result&&ships.length)await resolve(m);
+   else if(m.result&&!told.has(m.id)){told.add(m.id);if(!first)toast(`คู่แข่งยิง ${lab(m.cell)}: ${m.result==='hit'?'โดน':'พลาด'}`)}
+  }
+ }
+ first=false;
+ if(room.host===me.id&&room.status==='placing'&&room.host_ready&&room.guest_ready)
+  await sb.from('rooms').update({status:'playing',turn:Math.random()<.5?room.host:room.guest}).eq('id',room.id).eq('status','placing');
+ render();
+}
+async function resolve(m){
+ if(busy.has(m.id))return;busy.add(m.id);
+ const s=ships.find(s=>s.c.includes(m.cell));let res='miss',sunk=null;
+ if(s){res='hit';if(s.c.every(c=>c===m.cell||inShots[c]==='hit'))sunk=s.n}
+ inShots[m.cell]=res;told.add(m.id);
+ await sb.from('moves').update({result:res,sunk}).eq('id',m.id);
+ const all=ships.every(s=>s.c.every(c=>inShots[c]==='hit'));
+ await sb.from('rooms').update(all?{status:'done',winner:m.shooter}:{turn:me.id}).eq('id',room.id);
+ toast(`คู่แข่งยิง ${lab(m.cell)}: ${sunk?'เรือ'+sunk.replace('เรือ','')+'จม':res==='hit'?'โดน':'พลาด'}`);
+}
+const save=()=>localStorage['sh'+room.id]=JSON.stringify(ships);
+function fits(len,h,i){
+ const x=i%10,y=Math.floor(i/10);if(h?x+len>10:y+len>10)return null;
+ const c=[];for(let k=0;k<len;k++)c.push(h?i+k:i+k*10);
+ return c.some(q=>ships.some(s=>s.c.includes(q)))?null:c;
+}
+function board(fn){
+ let h='<div class="bd"><i></i>'+[...LT].map(l=>`<i class="hd">${l}</i>`).join('');
+ for(let y=0;y<10;y++){h+=`<i class="hd">${y+1}</i>`;for(let x=0;x<10;x++){const i=y*10+x,[c,a]=fn(i);h+=`<div class="c ${(x+y)%2?'a':''} ${c}" ${a?`data-a="${a}" data-i="${i}"`:''}></div>`}}
+ return `<div class="bw">${h}</div></div>`;
+}
+function render(){
+ if(!room||$('#game').hidden)return;
+ const r=room,host=r.host===me.id,opp=host?r.g:r.h,oname=opp?esc(opp.username):'รอคู่แข่ง…';
+ const myReady=host?r.host_ready:r.guest_ready,oppReady=host?r.guest_ready:r.host_ready;
+ const own=i=>{const sh=ships.some(s=>s.c.includes(i)),v=inShots[i];return [(sh?'ship ':'')+(v==='hit'?'hit':v==='miss'?'miss':'')]};
+ let main='',side='';
+ if(r.status==='waiting'||r.status==='placing'){
+  const k=ships.length,cur=k<5?SH[k]:null,canPlace=!myReady&&cur;
+  main=`<div class="turn">${r.status==='waiting'?`รอคู่แข่ง · รหัสห้อง ${r.code}`:myReady?(oppReady?'กำลังเริ่มเกม…':'รอคู่แข่งวางเรือให้เสร็จ'):'วางกองเรือของคุณ'}</div>`+board(i=>{const [c]=own(i);return [c,canPlace?'place':'']});
+  side=`<div class="card"><h3>กองเรือ</h3>${SH.map((s,i)=>`<span class="chip ${i<k?'x':i===k?'cur':''}">${s[0]} ${s[1]}</span>`).join('')}
+   <div class="row" style="margin-top:10px;flex-wrap:wrap"><button class="b2" data-a="rotate">${pl.h?'แนวนอน':'แนวตั้ง'} (กดเพื่อหมุน)</button><button class="b2" data-a="undo">ย้อนกลับ</button><button class="b2" data-a="rand">สุ่มวาง</button></div>
+   <div class="row"><button class="b" data-a="ready">${myReady?'พร้อมแล้ว':'พร้อมเล่น'}</button></div></div>`;
+  if(!r.guest){const on=friends.filter(f=>online[f.id]);side+=`<div class="card"><h3>ชวนเพื่อน</h3>${on.map(f=>`<div class="li"><i class="dot"></i><span class="sp">${esc(f.username)}</span><button class="b2" data-a="inv" data-id="${f.id}">ชวน</button></div>`).join('')||'<p class="mut">ไม่มีเพื่อนออนไลน์ แชร์รหัสห้องให้เพื่อนได้เลย</p>'}</div>`}
+ }else{
+  const mine=r.turn===me.id&&r.status==='playing'&&!Object.values(myShots).includes('?');
+  main=`<div class="turn ${mine?'me':''}">${r.status==='done'?'จบเกม':mine?'ตาของคุณ: เลือกช่องที่จะยิง':'รอคู่แข่งยิง…'}</div>
+   <p class="mut" style="text-align:center;margin:0">น่านน้ำศัตรู</p>`+board(i=>{const v=myShots[i];return [v==='hit'?'hit':v==='miss'?'miss':v==='?'?'pend':mine?'tg':'',(!v&&mine)?'cell':'']})+
+   `<p class="mut" style="text-align:center;margin:0">กองเรือของคุณ</p>`+board(own);
+  side=`<div class="card"><h3>เรือศัตรูที่จมแล้ว</h3>${SH.map(s=>`<span class="chip ${sunkE.includes(s[0])?'x':''}">${s[0]}</span>`).join('')}<p class="mut">ยิงไปแล้ว ${Object.keys(myShots).length} นัด</p></div>`;
+ }
+ $('#game').innerHTML=`<div class="bar"><b>BATTLESHIP</b><span>${esc(me.username)} vs ${oname}</span><span class="sp"></span><button class="b2" data-a="leave">${r.status==='playing'?'ยอมแพ้':'ออกจากห้อง'}</button></div><div class="gm"><div>${main}</div><div>${side}</div></div>`;
+ if(r.status==='done'){const win=r.winner===me.id;modal(`<h3>${win?'คุณชนะ!':'คุณแพ้'}</h3><p class="mut">${win?'เรือศัตรูจมหมดแล้ว':'เรือของคุณจมหมดแล้ว'}</p><div class="row"><button class="b" data-a="back">กลับหน้าหลัก</button></div>`)}
+}
+function leaveUI(){if(rch)sb.removeChannel(rch);rch=null;room=null;ships=[];modal('');show('lobby');track();loadLobby()}
+
+function cred(){
+ let e=$('#em').value.trim().toLowerCase();const p=$('#pw').value;
+ if(!e)return toast('กรอกชื่อ Gmail ก่อน');
+ if(!e.includes('@'))e+='@gmail.com';
+ if(!/^[a-z0-9._+-]+@gmail\.com$/.test(e))return toast('ใช้ได้เฉพาะ Gmail');
+ if(p.length<6)return toast('รหัสผ่านต้องยาวอย่างน้อย 6 ตัว');
+ return {email:e,password:p};
+}
+const act={
+ async login(){
+  const c=cred();if(!c)return;
+  const {error}=await sb.auth.signInWithPassword(c);
+  if(error)return toast(error.message==='Invalid login credentials'?'Gmail หรือรหัสผ่านไม่ถูกต้อง ถ้ายังไม่มีบัญชีกด "สมัครใหม่"':esc(error.message),6000);
+  init();
+ },
+ async signup(){
+  const c=cred();if(!c)return;
+  const {data,error}=await sb.auth.signUp(c);
+  if(error)return toast(esc(error.message),6000);
+  if(!data.session){const r=await sb.auth.signInWithPassword(c);if(r.error)return toast('สมัครแล้ว แต่ Supabase ยังบังคับยืนยันอีเมล ให้ปิด Confirm email ก่อน',8000)}
+  init();
+ },
+ logout:async()=>{await sb.auth.signOut();location.reload()},
+ async saveName(d){
+  const n=$('#un').value.trim();
+  if(!/^[A-Za-z0-9_ก-๙]{3,16}$/.test(n))return askName(d.id,'ชื่อต้องยาว 3-16 ตัว ใช้ตัวอักษร ตัวเลข หรือ _ เท่านั้น');
+  const {data,error}=await sb.from('profiles').insert({id:d.id,username:n}).select().single();
+  if(error)return askName(d.id,error.code==='23505'?'ชื่อนี้มีคนใช้แล้ว ลองชื่ออื่น':error.message);
+  modal('');me=data;lobby();
+ },
+ cfg(d){cfg[d.k]=d.v;applyCfg();renderSet()},
+ async create(){
+  const code=[...Array(4)].map(()=>'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.random()*32|0]).join('');
+  const {data,error}=await sb.from('rooms').insert({code,host:me.id}).select().single();
+  if(error)return toast(error.message);enter(data);
+ },
+ joinCode:()=>join('code',$('#jc').value.trim().toUpperCase()),
+ join:d=>join('id',d.v),joinInv:d=>join('code',d.c),
+ async search(){
+  const q=$('#fs').value.trim().replace(/[%,]/g,'');if(!q)return;
+  const {data}=await sb.from('profiles').select('id,username').ilike('username','%'+q+'%').neq('id',me.id).limit(6);
+  found=data||[];if(!found.length)toast('ไม่พบผู้เล่นชื่อนี้');renderFriends();
+ },
+ async add(d){await sb.from('friends').insert({user_id:me.id,friend_id:d.id});found=[];toast('เพิ่มเพื่อนแล้ว');loadLobby()},
+ inv(d){chan.send({type:'broadcast',event:'invite',payload:{to:d.id,from:me.username,code:room.code}});toast('ส่งคำชวนแล้ว')},
+ place(d){const k=ships.length;if(k>=5)return;const c=fits(SH[k][1],pl.h,+d.i);if(!c)return toast('วางตรงนี้ไม่ได้');ships.push({n:SH[k][0],c});save();render()},
+ rotate(){pl.h=!pl.h;render()},
+ undo(){if(!ships.length||(room.host===me.id?room.host_ready:room.guest_ready))return;ships.pop();save();render()},
+ rand(){if(room.host===me.id?room.host_ready:room.guest_ready)return;ships=[];for(const [n,l] of SH){let c;do{c=fits(l,Math.random()<.5,Math.floor(Math.random()*100))}while(!c);ships.push({n,c})}save();render()},
+ async ready(){
+  if(ships.length<5)return toast('วางเรือให้ครบ 5 ลำก่อน');
+  if(!room.guest)return toast('รอคู่แข่งเข้าห้องก่อน');
+  save();await sb.from('rooms').update(room.host===me.id?{host_ready:true}:{guest_ready:true}).eq('id',room.id);
+ },
+ cell(d){
+  if(room.turn!==me.id||room.status!=='playing')return toast('ยังไม่ถึงตาคุณ');
+  if(myShots[d.i])return toast('ยิงช่องนี้ไปแล้ว');
+  modal(`<h3>ยิง ${lab(+d.i)} จริงหรือไม่?</h3><p class="mut">เลือกแล้วจะยกเลิกไม่ได้</p><div class="row"><button class="b" data-a="fire" data-i="${d.i}">ยิง</button><button class="b2" data-a="close">ยกเลิก</button></div>`);
+ },
+ close:()=>modal(''),
+ async fire(d){
+  modal('');myShots[d.i]='?';render();
+  const {error}=await sb.from('moves').insert({room_id:room.id,shooter:me.id,cell:+d.i});
+  if(error){toast('ยิงไม่สำเร็จ ลองใหม่');sync()}
+ },
+ async leave(){
+  if(room.status==='playing'){await sb.from('rooms').update({status:'done',winner:room.host===me.id?room.guest:room.host}).eq('id',room.id)}
+  else if(room.host===me.id&&!room.guest)await sb.from('rooms').delete().eq('id',room.id);
+  leaveUI();
+ },
+ back:leaveUI
+};
+document.addEventListener('click',e=>{const t=e.target.closest('[data-a]');if(t&&act[t.dataset.a])act[t.dataset.a](t.dataset)});
+document.addEventListener('submit',e=>{if(e.target.id==='lf'){e.preventDefault();act.login()}});
+window.addEventListener('error',e=>{if(allHidden())fail('ข้อผิดพลาด: '+esc(e.message))});
+window.addEventListener('unhandledrejection',e=>{if(allHidden())fail('ข้อผิดพลาด: '+esc((e.reason&&e.reason.message)||e.reason))});
+setTimeout(()=>{if(allHidden())fail('เชื่อมต่อ Supabase ไม่ทัน ตรวจอินเทอร์เน็ต หรือลองเปิดผ่านลิงก์เว็บ (GitHub Pages) แทนการเปิดไฟล์ตรงๆ')},6000);
+init().catch(e=>fail(esc(e.message||e)));
+</script>
+</body>
+</html>
